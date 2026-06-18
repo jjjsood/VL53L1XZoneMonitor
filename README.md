@@ -126,6 +126,6 @@ This library is released under the GPL License. See the `LICENSE` file for detai
 ## Author
 Johannes Sood
 
-GitHub: [JohnnyJagatpal](https://github.com/JohnnyJagatpal/VL53L1XZoneMonitor)
+GitHub: [JJJSood](https://github.com/jjjsood/VL53L1XZoneMonitor)
 
 For any questions or issues, feel free to open an issue in the repository.
