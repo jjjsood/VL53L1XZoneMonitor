@@ -6,14 +6,23 @@
 
 ZoneObserver::ZoneObserver(uint16_t min, uint16_t max, std::function<void(uint16_t)> onEnter, std::function<void()> onExit)
     : min_distance(min), max_distance(max), object_present(false), on_enter(std::move(onEnter)), on_exit(std::move(onExit)),
-      in_zone_count(0), out_zone_count(0) {}
+      in_zone_count(0), out_zone_count(0)
+{
+    if (min_distance > max_distance)
+    {
+        uint16_t tmp = min_distance;
+        min_distance = max_distance;
+        max_distance = tmp;
+    }
+}
 
 void ZoneObserver::evaluate(uint16_t distance, size_t certainty)
 {
     bool in_zone = (distance >= min_distance && distance <= max_distance);
     if (in_zone)
     {
-        in_zone_count++;
+        if (in_zone_count < certainty)
+            in_zone_count++;
         out_zone_count = 0;
         if (in_zone_count >= certainty && !object_present)
         {
@@ -24,7 +33,8 @@ void ZoneObserver::evaluate(uint16_t distance, size_t certainty)
     }
     else
     {
-        out_zone_count++;
+        if (out_zone_count < certainty)
+            out_zone_count++;
         in_zone_count = 0;
         if (out_zone_count >= certainty && object_present)
         {
@@ -41,7 +51,7 @@ bool ZoneObserver::isObjectPresent() const
 }
 
 VL53L1XZoneMonitor::VL53L1XZoneMonitor(TwoWire *wire, uint32_t interval_ms, size_t certainty)
-    : update_interval_ms(interval_ms), last_update_time(0), certainty_factor(certainty)
+    : update_interval_ms(interval_ms), last_update_time(0), last_distance(0), certainty_factor(certainty < 1 ? 1 : certainty)
 {
     if (wire)
     {
@@ -94,7 +104,6 @@ void VL53L1XZoneMonitor::addZone(uint16_t min, uint16_t max, std::function<void(
 
 bool VL53L1XZoneMonitor::isObjectInZone(size_t zone_index)
 {
-    performUpdate();
     if (zone_index < zones.size())
     {
         return zones[zone_index].isObjectPresent();
@@ -118,18 +127,18 @@ ZoneObserver *VL53L1XZoneMonitor::getZone(size_t zone_index)
 
 void VL53L1XZoneMonitor::updateZone(size_t zone_index, uint16_t min_distance, uint16_t max_distance)
 {
-    if (zone_index < zones.size())
-    {
-        if (min_distance != 0)
-        {
-            zones[zone_index].min_distance = min_distance;
-        }
-
-        if (max_distance != 0)
-        {
-            zones[zone_index].max_distance = max_distance;
-        }
-    }
+    if (zone_index >= zones.size())
+        return;
+    uint16_t new_min = zones[zone_index].min_distance;
+    uint16_t new_max = zones[zone_index].max_distance;
+    if (min_distance != 0)
+        new_min = min_distance;
+    if (max_distance != 0)
+        new_max = max_distance;
+    if (new_min > new_max)
+        return;
+    zones[zone_index].min_distance = new_min;
+    zones[zone_index].max_distance = new_max;
 }
 
 void VL53L1XZoneMonitor::deleteZone(size_t zone_index)
@@ -142,16 +151,12 @@ void VL53L1XZoneMonitor::deleteZone(size_t zone_index)
 
 uint16_t VL53L1XZoneMonitor::getDistance()
 {
-    if (sensor.dataReady())
-    {
-        return sensor.read(false);
-    }
-    return 0;
+    return last_distance;
 }
 
 void VL53L1XZoneMonitor::setCertaintyFactor(size_t certainty)
 {
-    certainty_factor = certainty;
+    certainty_factor = (certainty < 1) ? 1 : certainty;
 }
 
 size_t VL53L1XZoneMonitor::getCertaintyFactor() const
@@ -161,19 +166,21 @@ size_t VL53L1XZoneMonitor::getCertaintyFactor() const
 
 void VL53L1XZoneMonitor::performUpdate()
 {
-    if (millis() - last_update_time >= update_interval_ms)
+    if (millis() - last_update_time < update_interval_ms)
+        return;
+    if (!sensor.dataReady())
+        return;
+    last_update_time = millis();
+    uint16_t distance = sensor.read(false);
+    if (sensor.timeoutOccurred())
+        return;
+    last_distance = distance;
+    for (auto &zone : zones)
     {
-        last_update_time = millis();
-        if (sensor.dataReady())
-        {
-            uint16_t distance = sensor.read(false);
-            for (auto &zone : zones)
-            {
-                zone.evaluate(distance, certainty_factor);
-            }
-        }
+        zone.evaluate(distance, certainty_factor);
     }
 }
+
 
 void VL53L1XZoneMonitor::update()
 {

@@ -2,7 +2,7 @@
 #define VL53L1XZONEMONITOR_H
 
 #include <VL53L1X.h>
-#include <vector>
+#include <deque>
 #include <functional>
 
 /**
@@ -64,16 +64,18 @@ public:
 class VL53L1XZoneMonitor {
 private:
     VL53L1X sensor;                  /**< Instance of the VL53L1X sensor. */
-    std::vector<ZoneObserver> zones; /**< List of defined zones. */
+    std::deque<ZoneObserver> zones; /**< List of defined zones. */
     uint32_t update_interval_ms;     /**< Interval for continuous measurements in milliseconds. */
     uint32_t last_update_time;       /**< Timestamp of the last measurement update. */
+    uint16_t last_distance;          /**< Last recorded distance measurement in millimeters. */
     size_t certainty_factor;         /**< Number of consecutive measurements required for stability. */
 
     /**
      * @brief Performs a measurement update and evaluates all zones.
      *
      * This method reads the sensor data and updates the state of each zone,
-     * triggering callbacks if the certainty factor is met.
+     * triggering callbacks if the certainty factor is met. Updates the
+     * last recorded distance measurement.
      */
     void performUpdate();
 
@@ -170,6 +172,9 @@ public:
     /**
      * @brief Checks if an object is present in a specific zone.
      *
+     * Returns the presence state as of the last update() call. This method does
+     * not itself trigger a new measurement.
+     *
      * @param zone_index The index of the zone to check.
      * @return True if an object is present, false otherwise.
      */
@@ -187,6 +192,9 @@ public:
      *
      * @param zone_index The index of the zone to retrieve.
      * @return Pointer to the ZoneObserver object, or nullptr if the index is invalid.
+     *
+     * Note: the returned pointer remains valid across addZone() calls, but
+     * deleteZone() invalidates pointers to the deleted zone and any zones after it.
      */
     ZoneObserver *getZone(size_t zone_index);
 
@@ -198,9 +206,9 @@ public:
     void deleteZone(size_t zone_index);
 
     /**
-     * @brief Gets the current distance measured by the sensor.
+     * @brief Gets the last recorded distance measured by the sensor.
      *
-     * @return The measured distance in millimeters, or 0 if no valid data is available.
+     * @return The last measured distance in millimeters, or 0 if no valid data is available.
      */
     uint16_t getDistance();
 

@@ -1,0 +1,34 @@
+#######################################
+# Syntax Coloring Map for VL53L1XZoneMonitor
+#######################################
+
+#######################################
+# Datatypes (KEYWORD1)
+#######################################
+
+VL53L1XZoneMonitor	KEYWORD1
+ZoneObserver	KEYWORD1
+
+#######################################
+# Methods and Functions (KEYWORD2)
+#######################################
+
+init	KEYWORD2
+setDistanceMode	KEYWORD2
+getDistanceMode	KEYWORD2
+setMeasurementTimingBudget	KEYWORD2
+getMeasurementTimingBudget	KEYWORD2
+setTimeout	KEYWORD2
+getTimeout	KEYWORD2
+addZone	KEYWORD2
+updateZone	KEYWORD2
+isObjectInZone	KEYWORD2
+getZoneCount	KEYWORD2
+getZone	KEYWORD2
+deleteZone	KEYWORD2
+getDistance	KEYWORD2
+setCertaintyFactor	KEYWORD2
+getCertaintyFactor	KEYWORD2
+update	KEYWORD2
+evaluate	KEYWORD2
+isObjectPresent	KEYWORD2
